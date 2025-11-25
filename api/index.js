@@ -47,4 +47,9 @@ app.post("/ask", async (req, res) => {
 
 // Bước 5: EXPORT ứng dụng Express cho Vercel
 // Đây là bước BẮT BUỘC cho Serverless Functions (không dùng app.listen)
+// Thêm route GET đơn giản này để kiểm tra tình trạng máy chủ
+app.get("/", (req, res) => {
+    res.json({ status: "API is running successfully!", endpoint: "/api/ask (POST)" });
+});
+
 module.exports = app;
