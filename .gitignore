@@ -1,0 +1,5 @@
+# Bỏ qua các thư mục và tệp nhạy cảm
+/node_modules
+/.env
+# Bỏ qua các tệp tạm của macOS và Windows
+.DS_Store
