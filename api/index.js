@@ -1,36 +1,50 @@
-require("dotenv").config();
+// Bước 1: Khai báo thư viện cần thiết
 const express = require("express");
 const OpenAI = require("openai");
 
+// Vercel không cần dotenv vì API Key đã được cung cấp qua Environment Variables
+// const dotenv = require("dotenv").config(); 
+// HOẶC 
+// require("dotenv").config(); 
+
+// Bước 2: Khởi tạo ứng dụng Express
 const app = express();
-app.use(express.json());
+app.use(express.json()); // Cho phép ứng dụng xử lý JSON từ request body
 
-// Kết nối OpenAI bằng API key trong .env
+// Bước 3: Khởi tạo OpenAI Client
+// Client sẽ tự động tìm biến OPENAI_API_KEY trong môi trường Vercel
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY, 
 });
 
-// API để Blynk hoặc ứng dụng khác gửi câu hỏi
+// Bước 4: Định nghĩa Endpoint API chính (/api/ask)
+// Endpoint này được gọi từ ứng dụng Blynk của bạn
 app.post("/ask", async (req, res) => {
-  try {
-    const { question } = req.body;
+    try {
+        // Lấy câu hỏi từ body của request (từ Blynk gửi lên)
+        const { question } = req.body;
 
-    if (!question) {
-      return res.status(400).json({ error: "Missing question field" });
-    }
+        if (!question) {
+            return res.status(400).json({ error: "Missing 'question' field in request body." });
+        }
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4.1-mini", // Hoặc model thực tế bạn đang dùng
-      messages: [{ role: "user", content: question }],
-    });
+        // Gọi API của OpenAI
+        const response = await client.chat.completions.create({
+            model: "gpt-4-turbo", // Bạn có thể chọn model phù hợp (ví dụ: gpt-3.5-turbo)
+            messages: [{ role: "user", content: question }],
+        });
 
-    res.json({ reply: response.choices[0].message.content });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "AI request failed" });
-  }
+        // Trả về câu trả lời cho Blynk dưới dạng JSON
+        // Blynk sẽ dùng JSON Path (.reply) để lấy nội dung này
+        res.json({ reply: response.choices[0].message.content });
+
+    } catch (error) {
+        console.error("OpenAI API Error:", error.message);
+        // Trả về lỗi nếu có vấn đề xảy ra
+        res.status(500).json({ error: "AI request failed due to server or API error." });
+    }
 });
 
-// ĐÂY LÀ PHẦN QUAN TRỌNG: Xuất ứng dụng cho Vercel
-// Vercel sẽ tự động lắng nghe và xử lý các yêu cầu
+// Bước 5: EXPORT ứng dụng Express cho Vercel
+// Đây là bước BẮT BUỘC cho Serverless Functions (không dùng app.listen)
 module.exports = app;
