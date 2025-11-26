@@ -4,35 +4,26 @@ import axios from "axios";
 const client = new OpenAI({ apiKey: process.env.OPENAI });
 const TOKEN = process.env.BLYNK_TOKEN;
 
-async function loop() {
-  // Lấy câu hỏi từ Terminal (V0)
-  const q = await axios.get(
-    `https://blynk.cloud/external/api/get?token=${TOKEN}&V0`
-  );
+export default async function handler(req, res) {
+  try {
+    const { message } = req.body;
 
-  if (!q.data) return; // chưa nhập gì thì bỏ qua
+    const ai = await client.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [{ role: "user", content: message }]
+    });
 
-  // Gửi sang ChatGPT
-  const ai = await client.chat.completions.create({
-    model: "gpt-4.1-mini",
-    messages: [{ role: "user", content: q.data }]
-  });
+    const reply = ai.choices[0].message.content;
 
-  const reply = ai.choices[0].message.content;
+    await axios.get(
+      `https://blynk.cloud/external/api/terminal?token=${TOKEN}&V0=${encodeURIComponent(
+        reply + "\n"
+      )}`
+    );
 
-  // Gửi câu trả lời lại vào Terminal (V0)
-  await axios.get(
-    `https://blynk.cloud/external/api/terminal?token=${TOKEN}&V0=${encodeURIComponent(
-      reply + "\n"
-    )}`
-  );
-
-  // Xóa input để không xử lý lại
-  await axios.get(
-    `https://blynk.cloud/external/api/update?token=${TOKEN}&V0=`
-  );
-
-  console.log("✅ Replied:", reply);
+    res.status(200).json({ reply });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.toString() });
+  }
 }
-
-setInterval(loop, 1500); // quét mỗi 1.5s
